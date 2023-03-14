@@ -4,15 +4,24 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-// reada write
+// read write
 import android.content.Context
 import java.io.*
-import java.nio.charset.StandardCharsets
 
+/*
+@Serializable
+data class wifi_info(
+    val ssid: null,
+    val key: null,
+    val title: null,
+    val desctiption: null
+)
+*/
 class MainActivity : AppCompatActivity() {
     // read write
     private lateinit var file: File
-    private val fileName = "test.txt"
+    //private val fileName = "test.txt"
+    private val fileName = "paper.json"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,17 +30,19 @@ class MainActivity : AppCompatActivity() {
         val external = applicationContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
         val cache = applicationContext.externalCacheDir
 
-        Log.v("### External ###", "$external")
-        Log.v("### External Cache ###", "$cache")
+        if (external != null) {
+            Log.v("### External ###", "$external")
+            Log.v("### External Cache ###", "$cache")
 
-        // read write
-        val context: Context = applicationContext
+            // read write
+            val context: Context = applicationContext
+            file = File(context.applicationContext.externalCacheDir, fileName)
 
-        //val fileName = "paper.json"
-        file = File(context.applicationContext.externalCacheDir, fileName)
-
-        val str = readFile()
-        //Log.v("### External str ###", "$str")
+            readFile()
+            readJson()
+            val data = readJson()
+            Log.v("### External data ###","$data")
+        }
     }
 
     // read write
@@ -53,6 +64,26 @@ class MainActivity : AppCompatActivity() {
         }
         return text
     }
+
+    /*
+    fun writeJson(data: String) {
+        val context: Context = applicationContext
+        // File(applicationContext.filesDir, filename).writer().use {
+            it.write(data)
+        }
+    }
+    */
+
+    private fun readJson(): String {
+        val context: Context = applicationContext
+        // val readFile = File(applicationContext.filesDir, filename)
+        val readFile = File(context.applicationContext.externalCacheDir, fileName)
+        if (readFile.exists()) {
+            return readFile.bufferedReader().use(BufferedReader::readText)
+        }
+        return String()
+    }
+
     /*
     private fun readFile(): String? {
         var text: String? = null
