@@ -8,20 +8,15 @@ import android.util.Log
 import android.content.Context
 import java.io.*
 
-/*
-@Serializable
-data class wifi_info(
-    val ssid: null,
-    val key: null,
-    val title: null,
-    val desctiption: null
-)
-*/
+import org.json.JSONException
+import org.json.JSONObject
+
 class MainActivity : AppCompatActivity() {
     // read write
     private lateinit var file: File
     //private val fileName = "test.txt"
     private val fileName = "paper.json"
+    private val config = mutableListOf<String>("")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,11 +32,44 @@ class MainActivity : AppCompatActivity() {
             // read write
             val context: Context = applicationContext
             file = File(context.applicationContext.externalCacheDir, fileName)
-
             readFile()
-            readJson()
-            val data = readJson()
-            Log.v("### External data ###","$data")
+            val str: String = readJson()
+            try {
+                val jsonObject = JSONObject(str)
+                val jsonArray = jsonObject.getJSONArray("sample")
+                for (i in 0 until jsonArray.length()) {
+                    val jsonData = jsonArray.getJSONObject(i)
+
+                    if (jsonData.isNull("ssid") == false) {
+                        config.add(jsonData.getString("ssid"))
+                        Log.v("check", config[1])
+                    }
+
+                    if (jsonData.isNull("key") == false) {
+                        config.add(jsonData.getString("key"))
+                        Log.v("check", config[2])
+                    }
+
+                    if (jsonData.isNull("title") == false) {
+                        config.add(jsonData.getString("title"))
+                        Log.v("check", config[3])
+                    }
+
+                    if (jsonData.isNull("description") == false) {
+                        config.add(jsonData.getString("description"))
+                        Log.v("check", config[4])
+                    }
+
+                    /*
+                    Log.d("Check", "$i : ${jsonData.getString("ssid")}")
+                    Log.d("Check", "$i : ${jsonData.getString("key")}")
+                    Log.d("Check", "$i : ${jsonData.getString("title")}")
+                    Log.d("Check", "$i : ${jsonData.getString("description")}")
+                    */
+                }
+            } catch (e: JSONException) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -83,26 +111,4 @@ class MainActivity : AppCompatActivity() {
         }
         return String()
     }
-
-    /*
-    private fun readFile(): String? {
-        var text: String? = null
-
-        try {
-            openFileInput(fileName).use { fileInputStream ->
-                BufferedReader(
-                    InputStreamReader(fileInputStream, StandardCharsets.UTF_8)
-                ).use { reader ->
-                    var lineBuffer: String?
-                    while (reader.readLine().also { lineBuffer = it } != null) {
-                        text = lineBuffer
-                    }
-                }
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-        return text
-    }
-     */
 }
