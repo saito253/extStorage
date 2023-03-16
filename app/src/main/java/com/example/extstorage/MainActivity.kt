@@ -25,6 +25,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        readFile()
+        val str: String = readJson()
+        getParam(str)
+        setwifi(config[1], config[2])
+    }
+    
+    private fun readFile(): String? {
+
+        var text: String? = null
         val external = applicationContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
         val cache = applicationContext.externalCacheDir
 
@@ -35,46 +44,80 @@ class MainActivity : AppCompatActivity() {
             // read write
             val context: Context = applicationContext
             file = File(context.applicationContext.externalCacheDir, fileName)
-            readFile()
-            val str: String = readJson()
+
             try {
-                val jsonObject = JSONObject(str)
-                val jsonArray = jsonObject.getJSONArray("sample")
-                for (i in 0 until jsonArray.length()) {
-                    val jsonData = jsonArray.getJSONObject(i)
-
-                    if (jsonData.isNull("ssid") == false) {
-                        config.add(jsonData.getString("ssid"))
-                        Log.v("check", config[1])
+                //BufferedReader(FileReader(file)).use { br -> text = br.readLine() }
+                BufferedReader(FileReader(file)).use { reader ->
+                    var lineBuffer: String?
+                    while (reader.readLine().also { lineBuffer = it } != null) {
+                        text = lineBuffer
+                        Log.v("### External str ###", "$text")
                     }
-
-                    if (jsonData.isNull("key") == false) {
-                        config.add(jsonData.getString("key"))
-                        Log.v("check", config[2])
-                    }
-
-                    if (jsonData.isNull("title") == false) {
-                        config.add(jsonData.getString("title"))
-                        Log.v("check", config[3])
-                    }
-
-                    if (jsonData.isNull("description") == false) {
-                        config.add(jsonData.getString("description"))
-                        Log.v("check", config[4])
-                    }
-
-                    /*
-                    Log.d("Check", "$i : ${jsonData.getString("ssid")}")
-                    Log.d("Check", "$i : ${jsonData.getString("key")}")
-                    Log.d("Check", "$i : ${jsonData.getString("title")}")
-                    Log.d("Check", "$i : ${jsonData.getString("description")}")
-                    */
                 }
-            } catch (e: JSONException) {
+            } catch (e: IOException) {
                 e.printStackTrace()
             }
         }
-        setwifi(config[1], config[2])
+        return text
+    }
+
+    private fun readJson(): String {
+        val context: Context = applicationContext
+        // val readFile = File(applicationContext.filesDir, filename)
+        val readFile = File(context.applicationContext.externalCacheDir, fileName)
+        if (readFile.exists()) {
+            return readFile.bufferedReader().use(BufferedReader::readText)
+        }
+        return String()
+    }
+
+    /*
+    fun writeJson(data: String) {
+        val context: Context = applicationContext
+        // File(applicationContext.filesDir, filename).writer().use {
+            it.write(data)
+        }
+    }
+    */
+
+    private fun getParam(str: String): String {
+        try {
+            val jsonObject = JSONObject(str)
+            val jsonArray = jsonObject.getJSONArray("sample")
+            for (i in 0 until jsonArray.length()) {
+                val jsonData = jsonArray.getJSONObject(i)
+
+                if (jsonData.isNull("ssid") == false) {
+                    config.add(jsonData.getString("ssid"))
+                    Log.v("check", config[1])
+                }
+
+                if (jsonData.isNull("key") == false) {
+                    config.add(jsonData.getString("key"))
+                    Log.v("check", config[2])
+                }
+
+                if (jsonData.isNull("title") == false) {
+                    config.add(jsonData.getString("title"))
+                    Log.v("check", config[3])
+                }
+
+                if (jsonData.isNull("description") == false) {
+                    config.add(jsonData.getString("description"))
+                    Log.v("check", config[4])
+                }
+
+                /*
+                Log.d("Check", "$i : ${jsonData.getString("ssid")}")
+                Log.d("Check", "$i : ${jsonData.getString("key")}")
+                Log.d("Check", "$i : ${jsonData.getString("title")}")
+                Log.d("Check", "$i : ${jsonData.getString("description")}")
+                */
+            }
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
+        return "OK"
     }
 
     private fun setwifi(ssid: String, password: String): String {
@@ -100,41 +143,4 @@ class MainActivity : AppCompatActivity() {
         wifiManager.enableNetwork(networkId, true)
         return "OK"
     }
-
-    // read write
-    private fun readFile(): String? {
-        var text: String? = null
-
-        try {
-            //BufferedReader(FileReader(file)).use { br -> text = br.readLine() }
-            BufferedReader(FileReader(file)).use {reader ->
-                var lineBuffer: String?
-                while (reader.readLine().also { lineBuffer = it } != null) {
-                    text = lineBuffer
-                    Log.v("### External str ###", "$text")
-                }
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-        return text
-    }
-
-    private fun readJson(): String {
-        val context: Context = applicationContext
-        // val readFile = File(applicationContext.filesDir, filename)
-        val readFile = File(context.applicationContext.externalCacheDir, fileName)
-        if (readFile.exists()) {
-            return readFile.bufferedReader().use(BufferedReader::readText)
-        }
-        return String()
-    }
-    /*
-fun writeJson(data: String) {
-    val context: Context = applicationContext
-    // File(applicationContext.filesDir, filename).writer().use {
-        it.write(data)
-    }
-}
-*/
 }
