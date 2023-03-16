@@ -1,18 +1,21 @@
 package com.example.extstorage
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Context
+import android.net.wifi.WifiConfiguration
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-// read write
-import android.content.Context
-import java.io.*
-
+import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
+import java.io.IOException
+
 
 class MainActivity : AppCompatActivity() {
-    // read write
     private lateinit var file: File
     //private val fileName = "test.txt"
     private val fileName = "paper.json"
@@ -71,10 +74,34 @@ class MainActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
         }
+        setwifi(config[1], config[2])
+    }
+
+    private fun setwifi(ssid: String, password: String): String {
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+
+        // ensure that WiFi is enabled
+        wifiManager.isWifiEnabled = true
+
+        //val ssid = "xxxx" // set the desired SSID here
+        //val password = "xxxxxxxxx" // set the password here
+
+        val wifiConfig = WifiConfiguration()
+        wifiConfig.SSID = "\"$ssid\""
+        wifiConfig.preSharedKey = "\"$password\""
+
+        // ensure that this network is saved
+        wifiConfig.status = WifiConfiguration.Status.ENABLED
+        wifiConfig.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK)
+
+        // add the network to the list of configured networks
+        val networkId = wifiManager.addNetwork(wifiConfig)
+        // enable the network
+        wifiManager.enableNetwork(networkId, true)
+        return "OK"
     }
 
     // read write
-    // ファイルを読み出し
     private fun readFile(): String? {
         var text: String? = null
 
@@ -93,15 +120,6 @@ class MainActivity : AppCompatActivity() {
         return text
     }
 
-    /*
-    fun writeJson(data: String) {
-        val context: Context = applicationContext
-        // File(applicationContext.filesDir, filename).writer().use {
-            it.write(data)
-        }
-    }
-    */
-
     private fun readJson(): String {
         val context: Context = applicationContext
         // val readFile = File(applicationContext.filesDir, filename)
@@ -111,4 +129,12 @@ class MainActivity : AppCompatActivity() {
         }
         return String()
     }
+    /*
+fun writeJson(data: String) {
+    val context: Context = applicationContext
+    // File(applicationContext.filesDir, filename).writer().use {
+        it.write(data)
+    }
+}
+*/
 }
