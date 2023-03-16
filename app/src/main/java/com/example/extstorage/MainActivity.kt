@@ -1,10 +1,7 @@
 package com.example.extstorage
 
-//import android.R.attr.password
-//import android.net.wifi.WifiConfiguration
-//import android.net.wifi.WifiConfiguration.KeyMgmt
-
 import android.content.Context
+import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Environment
@@ -19,7 +16,6 @@ import java.io.IOException
 
 
 class MainActivity : AppCompatActivity() {
-    // read write
     private lateinit var file: File
     //private val fileName = "test.txt"
     private val fileName = "paper.json"
@@ -78,33 +74,34 @@ class MainActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
         }
-        setwifi()
+        setwifi(config[1], config[2])
     }
 
-    private fun setwifi(): String {
-        val manager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-        //val enabled = manager.isWifiEnabled
-        //manager.isWifiEnabled
+    private fun setwifi(ssid: String, password: String): String {
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
-        val targetConfig = Wificonfiguration()
-        //targetConfig.allowedKeyManagement.set(KeyMgmt.WPA_PSK)
-        targetConfig.allowedKeyManagement.set(KeyMgmt.WPA_PSK)
-        targetConfig.SSID = '"' + "BH3" + '"'
-        targetConfig.preSharedKey = '"'.code + "bizright0335262090" + '"'.code
+        // ensure that WiFi is enabled
+        wifiManager.isWifiEnabled = true
 
-        val networkId: Int = manager.addNetwork(targetConfig)
+        //val ssid = "xxxx" // set the desired SSID here
+        //val password = "xxxxxxxxx" // set the password here
 
-        if (networkId != -1) {
-            manager.enableNetwork(networkId, true)
-        } else {
-            // 登録失敗
-        }
+        val wifiConfig = WifiConfiguration()
+        wifiConfig.SSID = "\"$ssid\""
+        wifiConfig.preSharedKey = "\"$password\""
 
+        // ensure that this network is saved
+        wifiConfig.status = WifiConfiguration.Status.ENABLED
+        wifiConfig.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK)
+
+        // add the network to the list of configured networks
+        val networkId = wifiManager.addNetwork(wifiConfig)
+        // enable the network
+        wifiManager.enableNetwork(networkId, true)
         return "OK"
     }
 
     // read write
-    // ファイルを読み出し
     private fun readFile(): String? {
         var text: String? = null
 
