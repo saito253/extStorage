@@ -14,6 +14,12 @@ import java.io.File
 import java.io.FileReader
 import java.io.IOException
 
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okio.ByteString
 
 class MainActivity : AppCompatActivity() {
     private lateinit var file: File
@@ -29,6 +35,11 @@ class MainActivity : AppCompatActivity() {
         val str: String = readJson()
         getParam(str)
         setwifi(config[1], config[2])
+
+        // websocket start
+        val webSocketClient = WebSocketClient()
+        webSocketClient.send("Hello from Android")
+        // websocket end
     }
     
     private fun readFile(): String? {
@@ -121,7 +132,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setwifi(ssid: String, password: String): String {
-        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
 
         // ensure that WiFi is enabled
         wifiManager.isWifiEnabled = true
@@ -142,5 +153,48 @@ class MainActivity : AppCompatActivity() {
         // enable the network
         wifiManager.enableNetwork(networkId, true)
         return "OK"
+    }
+}
+
+class WebSocketClient() : WebSocketListener() {
+    private val ws: WebSocket
+
+    init {
+        val client = OkHttpClient()
+
+        // 接続先のエンドポイント
+        // localhostとか127.0.0.1ではないことに注意
+        val request = Request.Builder()
+            .url("ws://10.0.2.2:8080")
+            .build()
+
+        ws = client.newWebSocket(request, this)
+        Log.v("### Websocket init ###", "OK")
+    }
+
+    fun send(message: String) {
+        ws.send(message)
+        Log.v("### Websocket messge ###", "$message")
+    }
+
+    override fun onOpen(webSocket: WebSocket, response: Response) {
+        println("WebSocket opened successfully")
+    }
+
+    override fun onMessage(webSocket: WebSocket, text: String) {
+        println("Received text message: $text")
+    }
+
+    override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+        println("Received binary message: ${bytes.hex()}")
+    }
+
+    override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+        webSocket.close(1000, null)
+        println("Connection closed: $code $reason")
+    }
+
+    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+        println("Connection failed: ${t.localizedMessage}")
     }
 }
