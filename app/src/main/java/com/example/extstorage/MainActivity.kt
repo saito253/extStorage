@@ -21,6 +21,8 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
 
+import java.util.concurrent.TimeUnit
+
 class MainActivity : AppCompatActivity() {
     private lateinit var file: File
     //private val fileName = "test.txt"
@@ -36,10 +38,9 @@ class MainActivity : AppCompatActivity() {
         getParam(str)
         setwifi(config[1], config[2])
 
-        // websocket start
         val webSocketClient = WebSocketClient()
+        TimeUnit.SECONDS.sleep(3)
         webSocketClient.send("Hello from Android")
-        // websocket end
     }
     
     private fun readFile(): String? {
@@ -165,11 +166,12 @@ class WebSocketClient() : WebSocketListener() {
         // 接続先のエンドポイント
         // localhostとか127.0.0.1ではないことに注意
         val request = Request.Builder()
-            .url("ws://10.0.2.2:8080")
+            //.url("ws://10.0.2.2:8080")
+            .url("ws://192.168.0.21:3000")
             .build()
 
         ws = client.newWebSocket(request, this)
-        Log.v("### Websocket init ###", "OK")
+        Log.v("### Websocket init ###", "$ws")
     }
 
     fun send(message: String) {
