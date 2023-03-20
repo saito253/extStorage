@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         getParam(str)
         setwifi(config[1], config[2])
 
-        val webSocketClient = WebSocketClient()
+        val webSocketClient = WebSocketClient(config[3])
         TimeUnit.SECONDS.sleep(3)
         webSocketClient.send("Hello from Android")
     }
@@ -109,8 +109,8 @@ class MainActivity : AppCompatActivity() {
                     Log.v("check", config[2])
                 }
 
-                if (jsonData.isNull("title") == false) {
-                    config.add(jsonData.getString("title"))
+                if (jsonData.isNull("ipaddr") == false) {
+                    config.add(jsonData.getString("ipaddr"))
                     Log.v("check", config[3])
                 }
 
@@ -157,7 +157,7 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-class WebSocketClient() : WebSocketListener() {
+class WebSocketClient(val ipaddr: String) : WebSocketListener() {
     private val ws: WebSocket
 
     init {
@@ -167,7 +167,7 @@ class WebSocketClient() : WebSocketListener() {
         // localhostとか127.0.0.1ではないことに注意
         val request = Request.Builder()
             //.url("ws://10.0.2.2:8080")
-            .url("ws://192.168.0.21:3000")
+            .url("ws://" + "$ipaddr" + ":3000")
             .build()
 
         ws = client.newWebSocket(request, this)
