@@ -23,26 +23,162 @@ import okio.ByteString
 
 import java.util.concurrent.TimeUnit
 
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+//import android.graphics.ImageDecoder
+import android.net.Uri
+
+import android.provider.MediaStore
+import android.widget.Button
+import android.widget.ImageView
+//import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import java.text.SimpleDateFormat
+import java.util.*
+
 class MainActivity : AppCompatActivity() {
     private lateinit var file: File
-    //private val fileName = "test.txt"
     private val fileName = "paper.json"
     private val config = mutableListOf<String>("")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        setupPermissions()
 
         readFile()
         val str: String = readJson()
         getParam(str)
         setwifi(config[1], config[2])
-
-        val webSocketClient = WebSocketClient(config[3])
         TimeUnit.SECONDS.sleep(3)
+
+        val webSocketClient = WebSocketClient(config[3], this)
         webSocketClient.send("Hello from Android")
     }
-    
+
+    // ------------------ camera start
+    private val REQUEST_IMAGE_CAPTURE = 2
+    private val RECORD_REQUEST_CODE = 1000
+
+    private lateinit var camera_iv: ImageView
+    private lateinit var camera_btn: Button
+    private lateinit var currentPhotoPath: String
+
+    // カメラを開くためのメソッド1
+    fun dispatchTakePictureIntent() {
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+            if (takePictureIntent.resolveActivity(this.packageManager) != null) {
+                // カメラで撮った写真をイメージファイルに作り
+                val photoFile: File? =
+                    try {
+                        createImageFile()
+                    } catch (ex: IOException) {
+                        Log.d("TAG", "イメージファイルを生成中にエラーが発生")
+                        null
+                    }
+
+                // イメージファイルを成功に作った場合onActivityForResultに送る
+                photoFile?.also {
+                    val photoURI: Uri = FileProvider.getUriForFile(
+                        this, "com.example.extstorage", it
+                    )
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+                    startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+                }
+            }
+        }
+    }
+
+
+    // カメラで撮った写真をイメージファイルに格納するためのメソッド
+    @Throws(IOException::class)
+    fun createImageFile(): File {
+        // Create an image file name
+        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+
+        Log.v("### CreateImageFile ###", "$timeStamp")
+        Log.v("### CreateImageFile ###", "$storageDir")
+
+        return File.createTempFile(
+            "JPEG_${timeStamp}_", /* prefix */
+            ".jpg", /* suffix */
+            storageDir /* directory */
+        ).apply {
+            // Save a file: path for use with ACTION_VIEW intents
+            currentPhotoPath = absolutePath
+        }
+    }
+
+    /*
+    // onActivityResultにイメージ設定
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        when (requestCode) {
+            2 -> {
+                if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
+
+                    // カメラから受け取ったデーターがある場合
+                    val file = File(currentPhotoPath)
+                    // SDKのバージョンが28以下の場合
+                    if (Build.VERSION.SDK_INT < 28) {
+                        val bitmap = MediaStore.Images.Media
+                            .getBitmap(contentResolver, Uri.fromFile(file))  //Deprecated
+                        camera_iv.setImageBitmap(bitmap)
+                    } else {
+                        val decode = ImageDecoder.createSource(
+                            this.contentResolver,
+                            Uri.fromFile(file)
+                        )
+                        val bitmap = ImageDecoder.decodeBitmap(decode)
+                        camera_iv.setImageBitmap(bitmap)
+                    }
+                }
+            }
+        }
+    }
+     */
+
+    //パーミッションのチェックを設定するためのメソッド
+    private fun setupPermissions() {
+        val permission = ContextCompat.checkSelfPermission(this,
+            Manifest.permission.CAMERA)
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            makeRequest()
+        }
+    }
+
+    //パーミッションをリクエストするためのメソッド
+    private fun makeRequest() {
+        ActivityCompat.requestPermissions(this,
+            arrayOf(Manifest.permission.CAMERA),
+            RECORD_REQUEST_CODE)
+    }
+
+    /*
+    //パーミッションの許可の結果による実行されるメソッド
+    override fun onRequestPermissionsResult(requestCode: Int,
+                                            permissions: Array<String>, grantResults: IntArray) {
+        when(requestCode){
+            RECORD_REQUEST_CODE ->{
+                if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(applicationContext, "カメラ機能が許可されませんでした。", Toast.LENGTH_SHORT).show()
+                }else{
+                    Toast.makeText(applicationContext, "カメラ機能が許可されました。", Toast.LENGTH_SHORT).show()
+                }
+                return
+            }
+        }
+    }
+     */
+    // ------------------ camera end
+
     private fun readFile(): String? {
 
         var text: String? = null
@@ -113,12 +249,12 @@ class MainActivity : AppCompatActivity() {
                     config.add(jsonData.getString("ipaddr"))
                     Log.v("check", config[3])
                 }
-
+                /*
                 if (jsonData.isNull("description") == false) {
                     config.add(jsonData.getString("description"))
                     Log.v("check", config[4])
                 }
-
+                */
                 /*
                 Log.d("Check", "$i : ${jsonData.getString("ssid")}")
                 Log.d("Check", "$i : ${jsonData.getString("key")}")
@@ -157,7 +293,8 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-class WebSocketClient(val ipaddr: String) : WebSocketListener() {
+class WebSocketClient(val ipaddr: String, val main: MainActivity) : WebSocketListener() {
+
     private val ws: WebSocket
 
     init {
@@ -185,6 +322,7 @@ class WebSocketClient(val ipaddr: String) : WebSocketListener() {
 
     override fun onMessage(webSocket: WebSocket, text: String) {
         println("Received text message: $text")
+        main.dispatchTakePictureIntent()
     }
 
     override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
