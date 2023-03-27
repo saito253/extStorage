@@ -25,21 +25,23 @@ import java.util.concurrent.TimeUnit
 
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
-//import android.graphics.ImageDecoder
+import android.graphics.ImageDecoder
 import android.net.Uri
-
+import android.os.Build
 import android.provider.MediaStore
 import android.widget.Button
 import android.widget.ImageView
-//import android.widget.Toast
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.text.SimpleDateFormat
 import java.util.*
 
+@Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
     private lateinit var file: File
     private val fileName = "paper.json"
@@ -54,7 +56,7 @@ class MainActivity : AppCompatActivity() {
         val str: String = readJson()
         getParam(str)
         setwifi(config[1], config[2])
-        TimeUnit.SECONDS.sleep(3)
+        TimeUnit.SECONDS.sleep(3) // wifiの設定から少し時間を空ける
 
         val webSocketClient = WebSocketClient(config[3], this)
         webSocketClient.send("Hello from Android")
@@ -68,7 +70,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var camera_btn: Button
     private lateinit var currentPhotoPath: String
 
-    // カメラを開くためのメソッド1
+    // カメラを開くためのメソッド
     fun dispatchTakePictureIntent() {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
             if (takePictureIntent.resolveActivity(this.packageManager) != null) {
@@ -88,6 +90,7 @@ class MainActivity : AppCompatActivity() {
                     )
                     takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
                     startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+                    Log.v("### startActivityForResult:", "----")
                 }
             }
         }
@@ -95,7 +98,7 @@ class MainActivity : AppCompatActivity() {
 
 
     // カメラで撮った写真をイメージファイルに格納するためのメソッド
-    @Throws(IOException::class)
+    //@Throws(IOException::class)
     fun createImageFile(): File {
         // Create an image file name
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
@@ -114,7 +117,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /*
     // onActivityResultにイメージ設定
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -130,6 +132,7 @@ class MainActivity : AppCompatActivity() {
                         val bitmap = MediaStore.Images.Media
                             .getBitmap(contentResolver, Uri.fromFile(file))  //Deprecated
                         camera_iv.setImageBitmap(bitmap)
+                        Log.v("### onActResult:", "A")
                     } else {
                         val decode = ImageDecoder.createSource(
                             this.contentResolver,
@@ -137,12 +140,12 @@ class MainActivity : AppCompatActivity() {
                         )
                         val bitmap = ImageDecoder.decodeBitmap(decode)
                         camera_iv.setImageBitmap(bitmap)
+                        Log.v("### onActResult:", "B")
                     }
                 }
             }
         }
     }
-     */
 
     //パーミッションのチェックを設定するためのメソッド
     private fun setupPermissions() {
@@ -161,6 +164,7 @@ class MainActivity : AppCompatActivity() {
             RECORD_REQUEST_CODE)
     }
 
+
     /*
     //パーミッションの許可の結果による実行されるメソッド
     override fun onRequestPermissionsResult(requestCode: Int,
@@ -176,7 +180,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-     */
+    */
     // ------------------ camera end
 
     private fun readFile(): String? {
