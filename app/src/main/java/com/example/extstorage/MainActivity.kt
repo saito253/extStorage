@@ -1,45 +1,38 @@
 package com.example.extstorage
 
+
+import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.ImageDecoder
+import android.net.Uri
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import okhttp3.*
+import okio.ByteString
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
 import java.io.IOException
-
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
-import okio.ByteString
-
-import java.util.concurrent.TimeUnit
-
-
-import android.Manifest
-import android.app.Activity
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.ImageDecoder
-import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
@@ -50,138 +43,17 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        setupPermissions()
 
         readFile()
         val str: String = readJson()
         getParam(str)
         setwifi(config[1], config[2])
         TimeUnit.SECONDS.sleep(3) // wifiの設定から少し時間を空ける
-
+        //val camera = CameraActivity()
+        setupPermissions()
         val webSocketClient = WebSocketClient(config[3], this)
         webSocketClient.send("Hello from Android")
     }
-
-    // ------------------ camera start
-    private val REQUEST_IMAGE_CAPTURE = 2
-    private val RECORD_REQUEST_CODE = 1000
-
-    private lateinit var camera_iv: ImageView
-    private lateinit var camera_btn: Button
-    private lateinit var currentPhotoPath: String
-
-    // カメラを開くためのメソッド
-    fun dispatchTakePictureIntent() {
-        Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
-            if (takePictureIntent.resolveActivity(this.packageManager) != null) {
-                // カメラで撮った写真をイメージファイルに作り
-                val photoFile: File? =
-                    try {
-                        createImageFile()
-                    } catch (ex: IOException) {
-                        Log.d("TAG", "イメージファイルを生成中にエラーが発生")
-                        null
-                    }
-
-                // イメージファイルを成功に作った場合onActivityForResultに送る
-                photoFile?.also {
-                    val photoURI: Uri = FileProvider.getUriForFile(
-                        this, "com.example.extstorage", it
-                    )
-                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
-                    startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
-                    Log.v("### startActivityForResult:", "----")
-                }
-            }
-        }
-    }
-
-
-    // カメラで撮った写真をイメージファイルに格納するためのメソッド
-    //@Throws(IOException::class)
-    fun createImageFile(): File {
-        // Create an image file name
-        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
-        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-
-        Log.v("### CreateImageFile ###", "$timeStamp")
-        Log.v("### CreateImageFile ###", "$storageDir")
-
-        return File.createTempFile(
-            "JPEG_${timeStamp}_", /* prefix */
-            ".jpg", /* suffix */
-            storageDir /* directory */
-        ).apply {
-            // Save a file: path for use with ACTION_VIEW intents
-            currentPhotoPath = absolutePath
-        }
-    }
-
-    // onActivityResultにイメージ設定
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        when (requestCode) {
-            2 -> {
-                if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
-
-                    // カメラから受け取ったデーターがある場合
-                    val file = File(currentPhotoPath)
-                    // SDKのバージョンが28以下の場合
-                    if (Build.VERSION.SDK_INT < 28) {
-                        val bitmap = MediaStore.Images.Media
-                            .getBitmap(contentResolver, Uri.fromFile(file))  //Deprecated
-                        camera_iv.setImageBitmap(bitmap)
-                        Log.v("### onActResult:", "A")
-                    } else {
-                        val decode = ImageDecoder.createSource(
-                            this.contentResolver,
-                            Uri.fromFile(file)
-                        )
-                        val bitmap = ImageDecoder.decodeBitmap(decode)
-                        camera_iv.setImageBitmap(bitmap)
-                        Log.v("### onActResult:", "B")
-                    }
-                }
-            }
-        }
-    }
-
-    //パーミッションのチェックを設定するためのメソッド
-    private fun setupPermissions() {
-        val permission = ContextCompat.checkSelfPermission(this,
-            Manifest.permission.CAMERA)
-
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            makeRequest()
-        }
-    }
-
-    //パーミッションをリクエストするためのメソッド
-    private fun makeRequest() {
-        ActivityCompat.requestPermissions(this,
-            arrayOf(Manifest.permission.CAMERA),
-            RECORD_REQUEST_CODE)
-    }
-
-
-    /*
-    //パーミッションの許可の結果による実行されるメソッド
-    override fun onRequestPermissionsResult(requestCode: Int,
-                                            permissions: Array<String>, grantResults: IntArray) {
-        when(requestCode){
-            RECORD_REQUEST_CODE ->{
-                if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(applicationContext, "カメラ機能が許可されませんでした。", Toast.LENGTH_SHORT).show()
-                }else{
-                    Toast.makeText(applicationContext, "カメラ機能が許可されました。", Toast.LENGTH_SHORT).show()
-                }
-                return
-            }
-        }
-    }
-    */
-    // ------------------ camera end
 
     private fun readFile(): String? {
 
@@ -295,12 +167,137 @@ class MainActivity : AppCompatActivity() {
         wifiManager.enableNetwork(networkId, true)
         return "OK"
     }
+//}
+
+//class CameraActivity : AppCompatActivity() {
+
+    private val REQUEST_IMAGE_CAPTURE = 2
+    private val RECORD_REQUEST_CODE = 1000
+
+
+    private lateinit var camera_iv: ImageView
+    private lateinit var camera_btn: Button
+    private lateinit var currentPhotoPath: String
+
+    /*
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        setupPermissions()
+    }
+    */
+
+    // カメラを開くためのメソッド
+    fun dispatchTakePictureIntent() {
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+            if (takePictureIntent.resolveActivity(this.packageManager) != null) {
+                // カメラで撮った写真をイメージファイルに作り
+                val photoFile: File? =
+                    try {
+                        createImageFile()
+                    } catch (ex: IOException) {
+                        Log.d("TAG", "イメージファイルを生成中にエラーが発生")
+                        null
+                    }
+
+                // イメージファイルを成功に作った場合onActivityForResultに送る
+                photoFile?.also {
+                    val photoURI: Uri = FileProvider.getUriForFile(
+                        this, "com.example.android.fileprovider", it
+                    )
+                    // カメラ起動
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+                    startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+                    setResult(Activity.RESULT_OK, takePictureIntent)
+                    finish()
+                }
+            }
+        }
+    }
+
+    // カメラで撮った写真をイメージファイルに格納するためのメソッド
+    @Throws(IOException::class)
+    private fun createImageFile(): File {
+        // Create an image file name
+        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        return File.createTempFile(
+            "JPEG_${timeStamp}_", /* prefix */
+            ".jpg", /* suffix */
+            storageDir /* directory */
+        ).apply {
+            // Save a file: path for use with ACTION_VIEW intents
+            currentPhotoPath = absolutePath
+        }
+    }
+
+    // onActivityResultにイメージ設定
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        Log.v("### onActivity ###", "------------------")
+        when (requestCode){
+            2 -> {
+                if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK){
+                    // カメラから受け取ったデーターがある場合
+                    val file = File(currentPhotoPath)
+                    // SDKのバージョンが28以下の場合
+                    if (Build.VERSION.SDK_INT < 28) {
+                        Log.v("### onActivity ###", "1")
+                        val bitmap = MediaStore.Images.Media
+                            .getBitmap(contentResolver, Uri.fromFile(file))  //Deprecated
+                        camera_iv.setImageBitmap(bitmap)
+                    }
+                    else{
+                        Log.v("### onActivity ###", "2")
+                        val decode = ImageDecoder.createSource(this.contentResolver,
+                            Uri.fromFile(file))
+                        val bitmap = ImageDecoder.decodeBitmap(decode)
+                        camera_iv.setImageBitmap(bitmap)
+                    }
+                }
+            }
+        }
+    }
+
+    //パーミッションのチェックを設定するためのメソッド
+    private fun setupPermissions() {
+        val permission = ContextCompat.checkSelfPermission(this,
+            Manifest.permission.CAMERA)
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            makeRequest()
+        }
+    }
+
+    //パーミッションをリクエストするためのメソッド
+    private fun makeRequest() {
+        ActivityCompat.requestPermissions(this,
+            arrayOf(Manifest.permission.CAMERA),
+            RECORD_REQUEST_CODE)
+    }
+
+    //パーミッションの許可の結果による実行されるメソッド
+    /*
+    override fun onRequestPermissionsResult(requestCode: Int,
+                                            permissions: Array<String>, grantResults: IntArray) {
+        when (requestCode) {
+            RECORD_REQUEST_CODE -> {
+                if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(applicationContext, "カメラ機能が許可されませんでした。", Toast.LENGTH_SHORT)
+                        .show()
+                } else {
+                    Toast.makeText(applicationContext, "カメラ機能が許可されました。", Toast.LENGTH_SHORT).show()
+                }
+                return
+            }
+        }
+    }
+     */
 }
 
-class WebSocketClient(val ipaddr: String, val main: MainActivity) : WebSocketListener() {
+class WebSocketClient(val ipaddr: String, val camera: MainActivity) : WebSocketListener() {
 
     private val ws: WebSocket
-
     init {
         val client = OkHttpClient()
 
@@ -326,7 +323,7 @@ class WebSocketClient(val ipaddr: String, val main: MainActivity) : WebSocketLis
 
     override fun onMessage(webSocket: WebSocket, text: String) {
         println("Received text message: $text")
-        main.dispatchTakePictureIntent()
+        camera.dispatchTakePictureIntent()
     }
 
     override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
