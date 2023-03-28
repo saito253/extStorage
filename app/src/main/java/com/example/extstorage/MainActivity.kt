@@ -188,7 +188,7 @@ class MainActivity : AppCompatActivity() {
     */
 
     // カメラを開くためのメソッド
-    fun dispatchTakePictureIntent() {
+    fun dispatchTakePictureIntent(): String {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
             if (takePictureIntent.resolveActivity(this.packageManager) != null) {
                 // カメラで撮った写真をイメージファイルに作り
@@ -208,11 +208,10 @@ class MainActivity : AppCompatActivity() {
                     // カメラ起動
                     takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
                     startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
-                    setResult(Activity.RESULT_OK, takePictureIntent)
-                    finish()
                 }
             }
         }
+        return currentPhotoPath
     }
 
     // カメラで撮った写真をイメージファイルに格納するためのメソッド
@@ -235,6 +234,9 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         Log.v("### onActivity ###", "------------------")
+        // setResult(Activity.RESULT_OK, data)
+        onRestart()
+        /*
         when (requestCode){
             2 -> {
                 if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK){
@@ -257,6 +259,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+         */
     }
 
     //パーミッションのチェックを設定するためのメソッド
@@ -323,7 +326,8 @@ class WebSocketClient(val ipaddr: String, val camera: MainActivity) : WebSocketL
 
     override fun onMessage(webSocket: WebSocket, text: String) {
         println("Received text message: $text")
-        camera.dispatchTakePictureIntent()
+        val mes = camera.dispatchTakePictureIntent()
+        send(mes)
     }
 
     override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
