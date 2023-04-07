@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var file: File
     private val fileName = "paper.json"
     private val config = mutableListOf<String>("")
+    private val webSocketClient = WebSocketClient("0.0.0.0", this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,9 +51,9 @@ class MainActivity : AppCompatActivity() {
         setwifi(config[1], config[2])
         TimeUnit.SECONDS.sleep(3) // wifiの設定から少し時間を空ける
         //val camera = CameraActivity()
-        setupPermissions()
         val webSocketClient = WebSocketClient(config[3], this)
         webSocketClient.send("Hello from Android")
+        setupPermissions()
     }
 
     private fun readFile(): String? {
@@ -235,6 +236,7 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         Log.v("### onActivity ###", "------------------")
         // setResult(Activity.RESULT_OK, data)
+        webSocketClient.send("onActivityResult!!")
         onRestart()
         /*
         when (requestCode){
@@ -315,7 +317,7 @@ class WebSocketClient(val ipaddr: String, val camera: MainActivity) : WebSocketL
         Log.v("### Websocket init ###", "$ws")
     }
 
-    fun send(message: String) {
+    open fun send(message: String) {
         ws.send(message)
         Log.v("### Websocket messge ###", "$message")
     }
